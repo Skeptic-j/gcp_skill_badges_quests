@@ -8,6 +8,4 @@ This is a repo for Qwiklab labs solutions & notes that I've personally attempted
 
 3. Serves also as a notebook through my personal learning journey attempting the GCP Quest's guided and challenge labs.
 
-4. For attempting challenge labs, I do always reference back to solutions in guided labs.
-
-Each lab attempted is recorded down with solutions and notes in markdown notations.
+4. For attempting challenge labs, guided labs notes serves as references.
