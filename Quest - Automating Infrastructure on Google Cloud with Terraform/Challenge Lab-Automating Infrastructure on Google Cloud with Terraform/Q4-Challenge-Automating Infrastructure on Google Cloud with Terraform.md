@@ -64,6 +64,7 @@ variable "zone" {
 variable "network_name" {
   description = "The VPC name of the project to create the resource in."
   type        = string
+  default     = "default"
 }
 ```
 
@@ -74,11 +75,18 @@ cp variables.tf modules/instances/variables.tf && cp variables.tf modules/storag
 
 ### 1.3 Writing the provider block into /main.tf
 ```
+terraform{
+    required_providers {
+      google {
+          source = "hashicorp/google"
+          version = "~> 3.45.0"
+      }
+    }
+}
 provider "google" {
-  version = "~> 3.45.0"
   project     = var.project_id
   region      = var.region
-  zone		  = var.zone
+  zone		    = var.zone
 }
 ```
 Then `terraform init`.
@@ -89,7 +97,6 @@ Add the code below into ~/main.tf
 ```
 module "instances" {
   source = "./modules/instances"
-  project_id = var.project_id
 }
 ```
 Run command `terraform init`!! Do not miss this step
@@ -289,8 +296,14 @@ THen only we apply changes with `terraform apply`.
   }
 ```
 
+### 6.2 repeat for tf-instance-2 use "subnet-02" and also update main.tf file
 
-### 6.2 repeat for tf-instance-2 use "subnet-02"
+```
+module "instances" {
+  source = "./modules/instances"
+  network = "<REPLACE WITH GIVEN NETWORK NAME>"
+}
+```
 we apply changes with `terraform apply`.
 
 
