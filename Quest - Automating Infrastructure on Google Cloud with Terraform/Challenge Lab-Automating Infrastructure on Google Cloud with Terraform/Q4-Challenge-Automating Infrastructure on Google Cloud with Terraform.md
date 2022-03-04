@@ -31,19 +31,20 @@ modules/
 Steps to create the respective directories and files
 ```
 touch main.tf
-touch variable.tf
+touch variables.tf
 mkdir modules
 mkdir modules/instances
 mkdir modules/storage
 cd modules/instances
 touch instances.tf
 touch outputs.tf
-cd modules/storage
+cd ..
+cd storage
 touch storage.tf
 touch outputs.tf
 ```
 
-#### 1.2.1 add in variable into file /variables.tf
+#### 1.2.1 add in variable into file ~/variables.tf
 ```
 variable "project_id" {
   description = "The ID of the project to create the resource in."
@@ -60,9 +61,13 @@ variable "zone" {
   type        = string
   default	  = "us-central1-a"
 }
+variable "network_name" {
+  description = "The VPC name of the project to create the resource in."
+  type        = string
+}
 ```
 
-#### 1.2.2 Make a copy of variables file in sub directory
+Then make a copy of **variables.tf** file into subdirectory "instances" and "storage"
 ```
 cp variables.tf modules/instances/variables.tf && cp variables.tf modules/storage/variables.tf
 ```
@@ -76,23 +81,22 @@ provider "google" {
   zone		  = var.zone
 }
 ```
-
-### 1.4 terraform init
+Then `terraform init`.
 
 ---
-### 2.1 We want to import Two instances already created in the lab simulating existing resources
-#### 2.2.1 add into /main.tf
+### 2.1 We want to import the two instances already created in the lab simulating existing resources to be imported to out terraform state
+Add the code below into ~/main.tf
 ```
 module "instances" {
   source = "./modules/instances"
   project_id = var.project_id
 }
 ```
-terraform init
+Run command `terraform init`!! Do not miss this step
 
 ### 2.2.2 write resource config block into modules/instances/instances.tf 
-(match the pre-existing instances)("tf-instance-1" "tf-instance-2")
-this lab requires the 5 key arguments ONLY as shown below
+match the pre-existing instances config as accurate as possible for "tf-instance-1" "tf-instance-2".
+In real world, all arguments should be provided but this lab requires the 5 key arguments ONLY as shown below
 [manual](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance)
 
 ```
@@ -106,7 +110,7 @@ resource "google_compute_instance" "tf-instance-1" {
     }
   }
   network_interface {
-    network = "default"
+    network = var.network_name
     access_config {}
   }
   metadata_startup_script = <<-EOT
@@ -124,7 +128,7 @@ resource "google_compute_instance" "tf-instance-2" {
     }
   }
   network_interface {
-    network = "default"
+    network = var.network_name
     access_config {}
   }
   metadata_startup_script = <<-EOT
@@ -135,11 +139,13 @@ resource "google_compute_instance" "tf-instance-2" {
 ```
 
 #### 2.2.3 import infra state to module
+There are 3 examples provided by the manual as follows, we'll use the third example
 ```
-terraform import google_compute_instance.default {{project}}/{{zone}}/{{name}}		#provided in manual but not used
-terraform import google_compute_instance.default {{name}}							#provided in manual but not used
+terraform import google_compute_instance.default {{project}}/{{zone}}/{{name}}		
+terraform import google_compute_instance.default {{name}}							
 terraform import module.instances.google_compute_instance.tf-instance-1 tf-instance-1 
 # use this line above and repeat for tf-instance-2
+terraform import module.instances.google_compute_instance.tf-instance-2 tf-instance-2
 
 terraform show
 terraform apply
@@ -150,7 +156,7 @@ terraform apply
 #### 3.1.1 add resource block into modules/storage/storage.tf
 ```
 resource "google_storage_bucket" "remote-backend" {
-  name          = "USE LAB GIVEN BUCKET NAME"
+  name          = "<REPLACE WITH LAB GIVEN BUCKET NAME>"
   location      = "US"
   force_destroy = true
   uniform_bucket_level_access = true
@@ -161,7 +167,7 @@ resource "google_storage_bucket" "remote-backend" {
 ```
 output "bucket" {
   description = "The created storage bucket"
-  value       = google_storage_bucket.static-site
+  value       = google_storage_bucket.remote-backend
 }
 ```
 
@@ -172,21 +178,21 @@ module "storage" {
   project_id = var.project_id
 }
 ```
-then terraform init and apply to create bucket
+then `terraform init` and `terraform apply` to create bucket
 
-### 3.3 add terraform block to /main.tf 
+### 3.3 add terraform block to /main.tf and migrate terraform state to the bucket
 ```
 terraform {
   backend "gcs" {
-    bucket  = "PARSE GIVEN BUCKET NAME"
+    bucket  = "<REPLACE WITH GIVEN BUCKET NAME>"
     prefix  = "terraform/state"
   }
 }
 ```
-### 3.4 terraform init -migrate-state and yes to change tf state to GCS bucket
+Then run command `terraform init -migrate-state` and `yes` to change tf state to GCS bucket.
 
 ---
-### 4.1 modify resource on "tf-instance-1" at /modules/instances/instances.tf
+### 4.1 modify resource on "tf-instance-1" at /modules/instances/instances.tf as follows:
 ```
 resource "google_compute_instance" "tf-instance-1" {
   name         = "tf-instance-1"
@@ -195,10 +201,10 @@ resource "google_compute_instance" "tf-instance-1" {
 ```
 ### 4.2 repeat steps above for "tf-instance-2"
 
-### 4.3 add another new instance resources with name = <FOLLOW LAB GIVEN NAME>
+### 4.3 add another new instance resources with instance name as given in the lab.
 ```
-resource "google_compute_instance" "<FOLLOW LAB GIVEN NAME>" {
-  name         = "<FOLLOW LAB GIVEN NAME>"
+resource "google_compute_instance" "<REPLACE WITH LAB GIVEN NAME>" {
+  name         = "<REPLACE WITH LAB GIVEN NAME>"
   machine_type = "n1-standard-2"
   zone         = var.zone
   boot_disk {
@@ -207,9 +213,8 @@ resource "google_compute_instance" "<FOLLOW LAB GIVEN NAME>" {
     }
   }
   network_interface {
-    network = "default"
+    network = var.network_name
     }
-  }
   metadata_startup_script = <<-EOT
         #!/bin/bash
     EOT
@@ -228,12 +233,13 @@ output "instance_network" {
   value       = google_compute_instance.tf-instance-1.network_interface[0]
 }
 ```
-terraform apply
+then `terraform apply`
 
 ---
 ### 5.1 Taint 3rd instance
 ```
-terraform taint module.instances.google_compute_instance.tf-instance-342178        ##force to recreate the instance
+terraform taint module.instances.google_compute_instance.<REPLACE WITH 3RD INSTANCE NAME>        
+##forces to recreate the instance
 terraform apply
 ```
 
@@ -244,7 +250,7 @@ terraform apply          ##destroys the tainted VM
 
 ---
 ### 6.0 Use a module from the registry
-### 6.2 Add "network" module from registry to /main.tf file
+Add "network" module from registry to /main.tf file.
 [registry manual](https://registry.terraform.io/modules/terraform-google-modules/network/google/3.4.0)
 ```
 module "network" {
@@ -252,7 +258,7 @@ module "network" {
   version = "3.4.0"
   # insert the 3 required variables here
   project_id = var.project_id
-  network_name = "<USE GIVEN VPC NAME FROM THE LAB>"
+  network_name = "<REPLACE WITH GIVEN VPC NAME FROM THE LAB>"
   subnets = [
     {
             subnet_name           = "subnet-01"
@@ -268,23 +274,25 @@ module "network" {
   routing_mode = "GLOBAL"
 }
 ```
+Run `terraform init` command to install the module!
 
-### 6.3 terraform apply
+THen only we apply changes with `terraform apply`.
 
-### 6.4 update subnet information in /modules/instances/instances.tf for tf-instance-1
+### 6.1 update subnet information in /modules/instances/instances.tf for tf-instance-1
 [optional flags manual](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance)
+
 ```
 ...
   network_interface {
-	network = "USE VPC NAME GIVEN IN THE LAB"
+	  network = var.network_name
     subnetwork = "subnet-01"
-    }
   }
 ```
 
-### 6.5 repeat for tf-instance-2 use "subnet-02"
 
-terraform apply (might need to init if error)
+### 6.2 repeat for tf-instance-2 use "subnet-02"
+we apply changes with `terraform apply`.
+
 
 ---
 ### 7.1 add firewall resource to /main.tf
@@ -292,7 +300,7 @@ terraform apply (might need to init if error)
 ```
 resource "google_compute_firewall" "tf-firewall" {
   name    = "tf-firewall"
-  network = "USE LAB GIVEN VPC NAME"
+  network = "<REPLACE WITH LAB GIVEN VPC NAME>"
 
   allow {
     protocol = "icmp"

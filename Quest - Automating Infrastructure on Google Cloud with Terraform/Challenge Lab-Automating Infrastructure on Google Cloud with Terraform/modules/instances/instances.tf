@@ -9,7 +9,7 @@ resource "google_compute_instance" "tf-instance-1" {
     }
   }
   network_interface {
-    network = "tf-vpc-947846"
+    network = var.network_name
     subnetwork = "subnet-01"    
     access_config {}
   }
@@ -29,7 +29,7 @@ resource "google_compute_instance" "tf-instance-2" {
     }
   }
   network_interface {
-    network = "tf-vpc-947846"
+    network = var.network_name
     subnetwork = "subnet-02"
     access_config {}
   }

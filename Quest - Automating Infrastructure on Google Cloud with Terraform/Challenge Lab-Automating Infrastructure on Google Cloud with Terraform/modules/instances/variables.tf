@@ -13,3 +13,7 @@ variable "zone" {
   type        = string
   default	  = "us-central1-a"
 }
+variable "network_name" {
+  description = "The VPC name of the project to create the resource in."
+  type        = string
+}
