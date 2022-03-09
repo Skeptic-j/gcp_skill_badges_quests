@@ -42,6 +42,7 @@ cd ..
 cd storage
 touch storage.tf
 touch outputs.tf
+cd ../..
 ```
 
 #### 1.2.1 add in variable into file ~/variables.tf
@@ -49,7 +50,7 @@ touch outputs.tf
 variable "project_id" {
   description = "The ID of the project to create the resource in."
   type        = string
-  default	  = "qwiklabs-gcp-04-9723981765ac"
+  default	  = "<REPLACE WITH LAB GIVEN PROJECT ID>"
 }
 variable "region" {
   description = "The region of the project to create the resource in."
@@ -60,11 +61,6 @@ variable "zone" {
   description = "The zone of the project to create the resource in."
   type        = string
   default	  = "us-central1-a"
-}
-variable "network_name" {
-  description = "The VPC name of the project to create the resource in."
-  type        = string
-  default     = "default"
 }
 ```
 
@@ -77,7 +73,7 @@ cp variables.tf modules/instances/variables.tf && cp variables.tf modules/storag
 ```
 terraform{
     required_providers {
-      google {
+      google = {
           source = "hashicorp/google"
           version = "~> 3.45.0"
       }
@@ -96,28 +92,29 @@ Then `terraform init`.
 Add the code below into ~/main.tf
 ```
 module "instances" {
-  source = "./modules/instances"
+  source  = "./modules/instances"
+  project = var.project_id
 }
 ```
 Run command `terraform init`!! Do not miss this step
 
 ### 2.2.2 write resource config block into modules/instances/instances.tf 
 match the pre-existing instances config as accurate as possible for "tf-instance-1" "tf-instance-2".
-In real world, all arguments should be provided but this lab requires the 5 key arguments ONLY as shown below
+In real world, all arguments should be provided but this lab requires the 5 key arguments ONLY as shown below.<br>
 [manual](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance)
 
 ```
 resource "google_compute_instance" "tf-instance-1" {
   name         = "tf-instance-1"
   machine_type = "n1-standard-1"
-  zone         = var.zone
+  zone         = "us-central1-a"
   boot_disk {
     initialize_params {
-      image = "debian-10-buster-v20220118"
+      image = "debian-cloud/debian-10"
     }
   }
   network_interface {
-    network = var.network_name
+    network = "default"
     access_config {}
   }
   metadata_startup_script = <<-EOT
@@ -128,14 +125,14 @@ resource "google_compute_instance" "tf-instance-1" {
 resource "google_compute_instance" "tf-instance-2" {
   name         = "tf-instance-2"
   machine_type = "n1-standard-1"
-  zone         = var.zone
+  zone         = "us-central1-a"
   boot_disk {
     initialize_params {
-      image = "debian-10-buster-v20220118"
+      image = "debian-cloud/debian-10"
     }
   }
   network_interface {
-    network = var.network_name
+    network = "default"
     access_config {}
   }
   metadata_startup_script = <<-EOT
@@ -145,14 +142,23 @@ resource "google_compute_instance" "tf-instance-2" {
 }
 ```
 
+In case to troubleshoot & reset state in terraform:
+```
+terraform show
+terraform state list
+terraform state rm <items>
+terraform refresh
+```
+
 #### 2.2.3 import infra state to module
 There are 3 examples provided by the manual as follows, we'll use the third example
 ```
 terraform import google_compute_instance.default {{project}}/{{zone}}/{{name}}		
 terraform import google_compute_instance.default {{name}}							
-terraform import module.instances.google_compute_instance.tf-instance-1 tf-instance-1 
+terraform import module.instances.google_compute_instance.tf-instance-1 <instance 1 ID>
+
 # use this line above and repeat for tf-instance-2
-terraform import module.instances.google_compute_instance.tf-instance-2 tf-instance-2
+terraform import module.instances.google_compute_instance.tf-instance-2 <instance 2 ID>
 
 terraform show
 terraform apply
