@@ -98,8 +98,11 @@ gcloud container node-pools delete default-pool --cluster=$CLUSTERNAME
 ## Task 3: Apply a Frontend Update
 1. Create pod disruption budget **onlineboutique-frontend-pdb** for **frontend** deployment.
 ```
-kubectl create poddisruptionbudget onlineboutique-frontend-pdb --selector app=frontend --min-available 1
+kubectl create poddisruptionbudget onlineboutique-frontend-pdb --namespace=dev --selector app=frontend --min-available 1
+kubectl get poddisruptionbudget.policy --namespace=dev
 ```
+
+To update the frontend image, we have 3 options here and choose one either in 2a, 2b, and 2c.<br>
 
 2a. Open any editor and Edit image used in `microservices-demo/kubernetes-manifest/frontend.yaml` to the given new image. Change image from `frontend` to `gcr.io/qwiklabs-resources/onlineboutique-frontend:v2.1`. Also add `imagePullPolicy` to **Always**.
 ```
@@ -111,7 +114,7 @@ Then apply the changes.
 kubectl apply -f microservices-demo/kubernetes-manifest/frontend.yaml
 ```
 
-2b. Alternative method for deployment rollout:
+2b. Alternative method with deployment rollout:
 ```
 kubectl set image deployment/frontend --namespace=dev server=gcr.io/qwiklabs-resources/onlineboutique-frontend:v2.1
 kubectl rollout status deployment frontend --namespace=dev
@@ -123,6 +126,7 @@ kubectl get deployment frontend --namespace=dev
 ```
 kubectl edit deployment/frontend --namespace=dev
 ```
+save and exit `:x!` VI editor
 <br>
 
 ---
@@ -133,7 +137,7 @@ kubectl edit deployment/frontend --namespace=dev
 |-|-|
 |target cpu percentage|50|
 |min replicas|1|
-|max replicas|$MAXREP|
+|max replicas|10|
 
 ```
 kubectl autoscale deployment frontend --namespace=dev --cpu-percent=50 --min=1 --max=$MAXREP
